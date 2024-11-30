@@ -1,0 +1,352 @@
+./mongod --dbpath ~/Storage/mongodb/data --logpath ~/Storage/mongodb/logs/mongo.log; way to start a mongo db server
+
+mongosh is interactive cli for mongo db
+
+show dbs; shows the dbs
+
+use shop; create a db named shop and switch to it
+
+db.products.insertOne({"name":"S", "price":12.99}); way to insert data into a switched db on its collection products
+
+db.products.find(); show all of products collection
+
+Wired tiger is deafault storage engine of mongo, take care of query to data and File system to data conversion
+
+db.flightData.deleteOne({departureAirport: 'MUC'}); way to delete first doc matching the key
+
+db.flightData.updateOne({distance: 12000}, {$set:{marker: "del"}}); way to add a KV to a doc matching distance criteria, $set takes care of upsetting the doc for given KV
+
+db.flightData.updateMany({}, {$set:{marker: "toDel"}}); giving empty braces for criteria updates all
+
+db.flightData.deleteMany({marker:"toDel"}); deletes all matching the criteria
+
+db.flightData.insertMany([{doc1}, {doc2}])
+
+db.flightData.find({intercontinental: true}); finds document with given criteria
+
+db.flightData.find({distance: {$gt:10000}}); finds docs with key greater than 10000
+
+db.flightData.findOne({distance: {$gt:900}}); first matching the criteria
+
+db.flightData.updateOne({_id:ObjectId("6519381d30db9724bce7724b")}, {$set:{delayed:true}}); updating key of first matched criteria
+
+db.flightData.update({_id:ObjectId("6519381d30db9724bce7724b")}, {delayed:true}); w/o $set this rewrites the entire document with only delayed as key for the given criteria
+
+db.flightData.replaceOne({_id:ObjectId("6519381d30db9724bce7724b")}, {}); same as update but more typed
+
+find() gives cursor not all data
+
+db.passengers.find().toArray(); this gives all data basically exhausts cursor
+
+db.passengers.find().forEach(p => {}); loop through data and perform some function
+
+db.passengers.find({}, {name:1, _id:0}); projections to get data by including name field and excluding _id
+
+db.flightData.updateMany({}, {$set: {status: {description: "on", lastUpdated:"1"}}}); update all document with a new embedded doc(json within a json
+
+db.passengers.updateOne({name: "Albert Twostone"}, {$set: {hobbies: ["sports", "cooking"]}}); appending array attrib to doc entity named Albert..
+
+db.passengers.find({hobbies: "sports"}); finding docs having sports in the hobbies array
+
+db.flightData.find({"status.description":"on"}); way to query value on for description field of status field
+
+db.dropDatabase(); drop current used db
+
+db.myCollection.drop(); drop myCollection collection in used db
+
+db.numbers.insertOne({a: NumberInt(1)}); way to save large numbers
+
+Important data type limits are:
+
+Normal integers (int32) can hold a maximum value of +-2,147,483,647
+
+Long integers (int64) can hold a maximum value of +-9,223,372,036,854,775,807
+
+Text can be as long as you want - the limit is the 16mb restriction for the overall document
+
+It's also important to understand the difference between int32 (NumberInt), int64 (NumberLong) and a normal number as you can enter it in the shell. The same goes for a normal double and NumberDecimal.
+
+NumberInt creates a int32 value => NumberInt(55)
+
+NumberLong creates a int64 value => NumberLong(7489729384792)
+
+If you just use a number (e.g. insertOne({a: 1}), this will get added as a normal double into the database. The reason for this is that the shell is based on JS which only knows float/ double values and doesn't differ between integers and floats.
+
+NumberDecimal creates a high-precision double value => NumberDecimal("12.99") => This can be helpful for cases where you need (many) exact decimal places for calculations.
+
+var dsid=db.patients.findOne().diseaseSummary; query value save to var in shell(mongosh)
+
+In place data or nested data for static/not changing type data like customer order, and references for changing/dynamic data like city name or book authors name
+
+db.books.aggregate([{$lookup:{from:"authors",localField:"authors",foreignField:"_id",as:"creators"}}]); this lookup into authors collections where join is done by content of authors field in the book to _id field in authors collection, and the data is returned
+
+db.createCollection('posts', {
+  validator: {
+    $jsonSchema: {
+      bsonType: 'object',
+      required: ['title', 'text', 'creator', 'comments'],
+      properties: {
+        title: {
+          bsonType: 'string',
+          description: 'must be a string and is required'
+        },
+        text: {
+          bsonType: 'string',
+          description: 'must be a string and is required'
+        },
+        creator: {
+          bsonType: 'objectId',
+          description: 'must be an objectid and is required'
+        },
+        comments: {
+          bsonType: 'array',
+          description: 'must be an array and is required',
+          items: {
+            bsonType: 'object', #type of item in the array
+            required: ['text', 'author'], #what shouldd the obj hold
+            properties: {
+              text: {
+                bsonType: 'string', #type of content
+                description: 'must be a string and is required'
+              },
+              author: {
+                bsonType: 'objectId',
+                description: 'must be an objectid and is required'
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}); way to create a collection by defining it's schema, failure to abide by schema will not let data insert
+
+db.runCommand({
+  collMod: 'posts',
+  validator: {
+    $jsonSchema: {
+      bsonType: 'object',
+      required: ['title', 'text', 'creator', 'comments'],
+      properties: {
+        title: {
+          bsonType: 'string',
+          description: 'must be a string and is required'
+        },
+        text: {
+          bsonType: 'string',
+          description: 'must be a string and is required'
+        },
+        creator: {
+          bsonType: 'objectId',
+          description: 'must be an objectid and is required'
+        },
+        comments: {
+          bsonType: 'array',
+          description: 'must be an array and is required',
+          items: {
+            bsonType: 'object',
+            required: ['text', 'author'],
+            properties: {
+              text: {
+                bsonType: 'string',
+                description: 'must be a string and is required'
+              },
+              author: {
+                bsonType: 'objectId',
+                description: 'must be an objectid and is required'
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  validationAction: 'warn'
+}); way to modify a schema by running command,in this kind of validation schema invalidation is just logged but data is still inserted
+
+db.hobbies.insertMany([{}],{ordered:false}); this will insert data even if one entry insertion fails, so no rollback on failure
+
+db.persons.insertOne({name:"a"},{writeConcern:{w:1,j:true}}); w and j ensure if data ended up in server and from journal to storage respectively
+
+db.persons.insertOne({name:"a"},{writeConcern:{w:1,j:true,wtimeout:1}}); same as above but with timeout
+
+mongoimport a.json -d movie -c m1 --jsonArray --drop; import json array a.json into m1 of movie db and drop if already exists
+
+db.movies.find({runtime:{$ne:60}}); get all movies with runtime not equal to 60
+
+db.movies.find({runtime:{$in:[30,42]}}); find documents whose runtime is is the list
+
+db.movies.find({$or:[{"rating.average":{$lt:5}}]}); way to query by multiple OR condition
+
+db.movies.find({runtime:{$not:{$eq:60}}}); movies with runtime neq 60
+
+db.users.find({age:{$exists:true}}); find docs wherein age exists
+
+db.users.find({phone:{$type:"number"}}); find docs which type for phone is number
+
+db.movies.find({summary:{$regex:/musical/}}); regex way to find if summary contains musical
+
+db.sales.find({$expr:{$gt:["$volume","$target"]}}); making use of expression to find docs which have volume greater than target
+
+db.sales.find({$expr:{$gt:[{$cond:{if:{$gte:["$volume",190]},then:{$subtract:["$volume",10]},else:"$volume"}},"$target"]}}); find docs where if volume is gt 190 then sub 10 from it or else use the volume and then compare(gt) it with the target
+
+db.users.find({hobbies:{$size:1}}); find hobbies with size 3
+
+db.moviestarts.find({genre:{$all:["drama","thriller"]}}); find collections which genre contains all the array elements
+
+db.movies.find().sort({"rating.average":1,runtime:-1}); sort docs by two fields in descending order and 1 for ascending
+
+db.movies.find().skip(10); skip first 10 docs
+
+db.movies.find().limit(10); pagination
+
+db.movies.find({},{name:1,genre:1,runtime:1}); get docs with these fields and remove all other fields
+
+db.movies.find({genres:"Drama"},{"genre.$":1}); get docs which genre have drama in array and only display genre field
+
+db.movies.find({genres:"Drama"},{genres:{$elemMatch:{$eq:"Horror"}}}); this gets
+
+docs with both drama and horror, and genre is only displayed for horror match
+
+db.movies.find({"rating.average":{$gt:9}},{genres:{$slice:2},name:1}); this return docs having rating gt than 9 and first two ele of genres, can also give range to slice like [0, 1]
+
+db.users.updateOne({name:"aa"},{$inc:{age:1}}); increment age by 1 for name aa
+
+If we make update to the same field twice in one update statement then conflict error
+
+db.users.updateOne({name:"aa"},{$min:{age:1}}); update the value only if age is lower than 1 for name
+
+db.users.updateOne({name:"aa"},{$mul:{age:1.1}}); multiplies 1.1 to age of name aa
+
+db.users.updateMany({isSporty:true},{$unset:{phone:""}}); removes field phone for isSporty true docs
+
+db.users.updateMany({},{$rename:{age:"tAge"}}); way to rename field age
+
+db.users.updateOne({name:"Maria"},{$set:{age:29}},{upsert:true}); setting upsert ensures update or insert
+
+db.users.find({hobbies:{$elemMatch:{title:"sport",frequency:{$gte:3}}}}); finding a match in the for all keys in a single document
+
+db.users.updateMany({hobbies:{$elemMatch:{title:"sport",frequency:{$gte:3}}}},{$set:{"hobbies.$.highFreq":true}}); way to add highFreq field to all matched docs of users in hobbies.$ which denotes an array
+
+db.users.updateMany({totalAge:{$gt:1}},{$inc:{"hobbies.$[].frequency":-1}}); this means updating field freq of all ele in array hobby where totalAge is gt than 1
+
+db.users.updateMany({"hobbies.frequency":{$gt:2}},{$set:{"hobbies.$[el].goodFreq":true}},{arrayFilters:[{"el.frequency":{$gt:2}}]}); way to updated doc where freq in hobby array is gt than 2 such that every ele of hobby gets goodFreq field updated only if frequency field of ele is gt than 2, this avoids scenarios where only first ele of hobby gets updated(default match)
+
+db.users.updateOne({name:"M"},{$push:{hobbies:{$each:[{a:1},{a:2}],$sort:{a:-1}}}}); way to add multiple ele to field hobbies array in sorted way
+
+db.users.updateOne({name:"Ma"},{$pull:{hobbies:{title:"Hiki"}}}); remove all ele in hobbies array where title is wiki
+
+db.users.updateOne({name:"Ma"},{$pop:{hobbies:1}}); remove the last item of hobby array
+
+db.users.updateOne({name:""},{$addToSet:{hobbies:{title:"hiki",frq:2}}}); doesn't add ele to hobby array if it already exists
+
+db.users.deleteOne({name:"Chris"}); deleting doc
+
+db.contacts.createIndex({"dob.age":1}); create index ascending
+
+Index is not necessary if we return bigger chunks of data 'cause no performance gain
+
+db.contacts.createIndex({"dob.age":1,gender:1}); compound index
+
+db.contacts.getIndexes(); get all indexexs
+
+db.contacts.createIndex({email:1},{unique:true}); way to create a kind of primary key flavoured index so no two values of this field can be duplicate
+
+db.contacts.createIndex({"dob.age":1},{partialFilterExpression:{"dob.age":{$gt:60}}}); creates index on age for ages gt 60
+
+If there exists an unique indexes then we meed to ensure that instead value of the field is also unique
+
+db.sessions.createIndex({createdAt:1},{expireAfterSeconds:10}); creates TTL index and removes ele after 10 seconds, works because createdAt is iso time
+
+Covered query is query fully covered by index. Let's say index is on field a and we only want field a
+
+Index selection is done by winning b/w multiple eligible indexes and taking the one with lowest time to return some data. This is cached so that similar queries can use the approach without running the winning selection again
+
+Multi key indexes are indexes on an array
+
+db.contacts().createIndexes({address:{street:"M"}}); this creates multi key index for array address where street value is M
+
+db.products.createIndex({description:"text"}); this creates text index basically used when we want to  query for keywords in a string, in this case description is sentence type string
+
+db.products.find({$text:{$search:"book"}}); this searches for keyword book in a text index created above
+
+db.products.createIndex({title:"text",description:"text"}); way to create combined text indexes, useful when querying in multiple fields for a keyword
+
+db.products.find({$text:{$search:"awesome -t-shirt"}}); finds result containing awesome not t-shirt using - symbol
+
+db.products.createIndex({title:"text",description:"text"},{default_language:"german"}); default language to use when remove delimiters and words like a , the, an when creating index
+
+db.products.createIndex({title:"text",description:"text"},{default_language:"german",weights:{title:1,description:10}}); defining weights of index creation, this means description will be given 10 times as much priority as title, used I calculation of scoring when final find query is returned so we can decide what value to chose according to weightage score
+
+db.products.find({$text:{{$search:"",$caseSensitive:true}});search in case sensitive way
+
+db.products.find({$text:{$search:"red"},{score:{$meta:"textScore"}}}); defining the technique to used to calculate score for ereturenwd queries
+
+db.ratings.createIndex({age:1},{background:true}); creates index in background so this doesn't lock the collection
+
+db.places.createIndex({location:"2dsphere"}); creating an geospatial index on location field in places, location field is compliant to geospatial standards
+
+db.places.find({location:{$near:{$geometry:{type:"Point",coordinates:[-122.4686696,37.7698646],$maxDistance:30,$minDistance:10}}}}); finds the nearest location in the location with min and max Distance and from the given point geospatial data
+
+db.places.insertOne({name:"C",location:{type:"Point",coordinates:[-122.4615748,37.7701756]}}); geospatial data insertion in line with standards
+
+db.places.find({location:{$geoWithin:{$geometry:{type:"Polygon",coordinates:[[p1,p2,p3,p4,p1]]}}}}); this finds all the places/coordinates within the polygon coordinates, coordinates p1 is something like: [lat, long], thus coordinates field ends at p1 again 'cause ploygon is a close loop
+
+db.areas.find({area:{$geoIntersects:{$geometry:{type:"Point",coordinates:[-122.49089,37.76992]}}}}); finds if given point coordinates intersect with any location of type polygon in areas collection
+
+db.places.find({location:{$geoWithin:{$centerSphere:[[-122.46203,37.77286],1/6378.1]}}}); this finds locations in radius of 1km/6378.1 rads from the given coordinate, this returns data in unsorted form or as present in the db as compared to $near operator
+
+AGGREGATING IS basically transformation of data from one form to another
+
+db.persons.aggregate([{$match:{gender:"female"}},{$group:{_id:{state:"$location.state"},totalPersons:{$sum:1}}},{$sort:{totalPersons:-1}]); this find female gender collection and groups the ids by state field of location field and aggregating count in totalPersons sorted descending
+
+db.persons.aggregate([{$project:{_id:0,gender:1,fullName:{$concat:["$name.first"," ","$name.last"]}}}]); usingg projection to display selective fields and create new fields concatenating first and last name field of name 
+
+db.persons.aggregate([{$project:{_id:0,gender:1,fullName:{$concat:[{$toUpper:{$substrCP:["$name.first",0,1]}},{$substrCP:["$name.first",1,{$subtract:[{$strLenCP:"$name.first"},1]}]}," ",{$toUpper:{$substrCP:["$name.last",0,1]}}]}}}]); same as above but makes first char of first and last name to uppercase
+
+db.persons.aggregate([{$project:{_id:0,name:1,email:1,location:{type:"Point",coordinates:[{$convert:{input:"$location.coordinates.longitude",to:"double",onError:0,onNull:0}},{$convert:{input:"$location.coordinates.latitude",to:"double",onError:0,onNull:0}}]}}}]); converting string to double by using $convert, onError onNull are default values when erro/null happens
+
+db.persons.aggregate([{$project:{_id:0,birth:{$convert:{input:"$dob.date",to:"date"}}}},{$group:{_id:{year:{$isoWeekYear:"$birth"}},numP:{$sum:1}}}]); this aggregations groups by year using $isoWeekYear to get the year from ISODATE created in prev step
+
+db.friends.aggregate([{$group:{_id:{age:"$age"},allHobbies:{$push:"$hobbies"}}}]); in this aggregation grouping is done by age on id field and allHobbies is array of all data of hobbies field in the grouped age, instead of $push we can use $addToset which is not array but set
+
+db.friends.aggregate([{$unwind:"$hobbies"},{$group:{_id:{age:"$age"},allHobbies:{$push:"$hobbies"}}}]); same function but unwind is basically used to flatten the array so if hobbie has 5 ele then each of the hobbies will be repeated in document along with its content
+
+db.friends.aggregate([{$project:{_id:0,examScore:{$slice:["$examScores",1]}}}]); this shows only examscore and its first ele; $size gives size of array
+
+db.friends.aggregate([{$project:{_id:0,examScores:{$filter:{input:"$examScores",as:"sc",cond:{$gt:["$$sc.score",60]}}}}}]); gets all docs where scores in examsore is gt than 60
+
+db.persons.aggregate([ { $bucket: { groupBy: '$dob.age', boundaries: [18, 30, 40, 50, 60, 120], output: { numPersons: { $sum: 1 }, averageAge: { $avg: '$dob.age' } } } }] ); bucketing is a way to group the documents by defined boundaries, in this case age
+
+Use $out in aggregation to funnel result into new collection
+
+db.transformedPersons.aggregate([
+    {
+      $geoNear: {
+        near: {
+          type: 'Point',
+          coordinates: [-18.4, -42.8]
+        },
+        maxDistance: 1000000,
+        num: 10,
+        query: { age: { $gt: 30 } },
+        distanceField: "distance"
+      }
+    }
+  ]).pretty(); this is way to work on geo data and ensure that it's the first stage in aggregation pipeline
+
+NumberInt and NumberLong constructors can be used to store int and long values respectively
+
+use admin; db.createUser({user:"s",pwd:"s",roles:["userAdminAnyDatabase"]}), cmd to create user with all roles
+
+use admin; db.auth("adminuser","adminpwd"); use shop; db.updateUser("x", roles:["readWrite", {role:"readWrite, db:"blog"}]), way to update perm for a user in multiple databases by making use of admin role, shop is used here since that contains user x
+
+mongod --sslMode requireSSL --sslPEMKeyFile pemlocation; start mongo server in ssl mode
+
+mongosh --ssl --sslCA pemlocation --host localhost; connecting from client localhost is same as CN name in server cert
+
+db.createCollection("a",{capped:true,size:100,max:3}); creating a size capped collection of only 3 docs
+
+const session=db.getMongo().startSession(); const userColl=session.getDatabase("db").user; session.startTransaction(); userColl.deleteOne({a:"22"}); session.commitTransaction, way to run transactions
+
+users.createIndex({email:1},{unique:true}), way to enforce uniqueness on email entries by making use of Index   
